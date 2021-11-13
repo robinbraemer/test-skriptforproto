@@ -1,0 +1,20 @@
+import:
+    com.proto.v1.MessageProto
+    com.proto.v1.TestServiceGrpc
+    io.grpc.ManagedChannelBuilder
+
+on load:
+    set {test::chan} to ManagedChannelBuilder.forTarget("localhost:8080").usePlaintext().build()
+    set {test::cli} to TestServiceGrpc.newBlockingStub({test::chan})
+
+on unload:
+    {test::chan}.shutdownNow()
+    delete {test::*}
+
+command /test:
+    trigger:
+        set {_b} to MessageProto.TestRequest.newBuilder().setA("Robin").build()
+        send "%{_b}%"
+
+        set {_resp} to {test::cli}.test({_b})
+        send "%{_resp}%"
