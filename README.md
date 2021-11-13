@@ -21,4 +21,4 @@ cd server && ./start.sh
 cd skriptforproto && go run .
 ```
 3. Open Minecraft and join your server listening on `localhost`.
-4. 
+4. Execute the Minecraft command `/test` and watch the logs. DONE! :D
