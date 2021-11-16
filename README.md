@@ -21,4 +21,8 @@ cd server && ./start.sh
 cd skriptforproto && go run .
 ```
 3. Open Minecraft and join your server listening on `localhost`.
-4. Execute the Minecraft command `/test` and watch the logs. DONE! :D
+4. Execute the Minecraft commands and watch the logs. DONE! :D:
+   - `/hello YourName`
+   - `/helloAsyncSection YourName` - same as above but non-blocking
+   - `/helloAsyncFunc Bob 1` - same as above
+   - `/helloAsyncFunc Robin 0` - zero deadline makes rpc time out immediately

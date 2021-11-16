@@ -3,18 +3,71 @@ import:
     com.proto.v1.TestServiceGrpc
     io.grpc.ManagedChannelBuilder
 
+    io.grpc.Status$Code
+
+    com.google.common.util.concurrent.Futures
+    com.google.common.util.concurrent.FutureCallback
+
+    java.util.concurrent.TimeUnit
+
 on load:
     set {test::chan} to ManagedChannelBuilder.forTarget("localhost:8080").usePlaintext().build()
     set {test::cli} to TestServiceGrpc.newBlockingStub({test::chan})
+    set {test::asyncCli} to TestServiceGrpc.newFutureStub({test::chan})
 
 on unload:
     {test::chan}.shutdownNow()
     delete {test::*}
 
-command /test:
+command /hello <text>:
     trigger:
-        set {_b} to MessageProto.TestRequest.newBuilder().setA("Robin").build()
+        set {_b} to MessageProto.TestRequest.newBuilder().setA(arg 1).build()
         send "%{_b}%"
 
         set {_resp} to {test::cli}.test({_b})
         send "%{_resp}%"
+
+
+
+function onSuccess(a: object, b: object, c: object):
+    broadcast "%class of {_a}% %{_a}%"
+    broadcast "%class of {_b}% %{_b}%"
+    broadcast "%class of {_c}% %{_c}%"
+    
+function onFailure(a: object, b: object,):
+    broadcast "%class of {_a}% %{_a}%"
+    broadcast "%class of {_b}% %{_b}%"
+    set {_code} to {_b}.getStatus().getCode()
+    broadcast "%{_code}% %{_code}.equals(Code.UNAVAILABLE)%"
+    
+command /helloAsyncFunc <text> <integer>:
+    usage: /helloAsyncFunc <msg> <rpc timeout seconds>
+    trigger:
+        set {_functions::onSuccess} to function "onSuccess" called with 1234
+        set {_functions::onFailure} to function "onFailure"
+        set {_proxy} to new proxy instance of FutureCallback using {_functions::*}
+
+        set {_b} to MessageProto.TestRequest.newBuilder().setA(arg 1).build()
+        send "Sending async rpc..."
+        set {_future} to {test::asyncCli}.withDeadlineAfter(arg 2, TimeUnit.SECONDS).test({_b})
+        Futures.addCallback({_future}, {_proxy})
+
+
+command /helloAsyncSection <text>:
+    trigger:
+        create section with {_this}, {_o} stored in {_funcs::onSuccess}:
+            broadcast "%class of {_this}%"
+            broadcast "%class of {_o}%"
+            broadcast "%{_o}%"
+            
+        create section with {_this}, {_o} stored in {_funcs::onFailure}:
+            broadcast "%class of {_this}%"
+            broadcast "%class of {_o}%"
+            broadcast "%{_o}%"
+
+        set {_proxy} to new proxy instance of FutureCallback using {_funcs::*}
+
+        set {_b} to MessageProto.TestRequest.newBuilder().setA(arg 1).build()
+        send "Sending async rpc..."
+        set {_future} to {test::asyncCli}.test({_b})
+        Futures.addCallback({_future}, {_proxy})
